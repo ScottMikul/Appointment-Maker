@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+<link rel="stylesheet" href="/css/jquery-ui.css">
+<link rel="stylesheet" href="/css/jquery-ui.theme.css">
+<link rel="stylesheet" href="/css/styles.css">
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.10.16/datatables.min.css"/>
+
+
+
+
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+
+<div class="line-up-input-boxes fixed-height">
+
+    <div id="errorDiv"></div>
+
+    <button id="new" onclick="ToggleForm()" class="ui-button push-right">New</button>
+
+
+    <form id="addform" >
+        <button type="button" onclick="addAppointment()"class="ui-button small-margin push-right">Add</button>
+        <button type = "button" onclick="ToggleForm()" class="ui-button small-margin">Cancel</button>
+        <br />
+        <label>Date</label> <input type="text" name="date" id="datepicker" class="small-margin"/>
+        <br />
+        <label>Time</label> <input type="text" id="hours" class="small-margin"/> : <input type="text" id="minutes" class="small-margin">
+        <select id="ampm">
+            <option value="am">am</option>
+            <option value="pm">pm</option>
+        </select>
+        <br />
+        <label>Description</label> <input type="text" name="desc" id="desc" class="small-margin"/>
+
+
+    </form>
+</div>
+
+<table id="applist" class="display"></table>
+
+</body>
+<script src="js/jquery.js"></script>
+<script src="js/jquery-ui.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+<script>
+
+    var arr;
+    $(function() {
+       $('#addform').hide();
+
+
+        createTable();
+        $('#datepicker').datepicker({
+            beforeShow: function(input, inst)
+            {
+                inst.dpDiv.css({marginTop: -input.offsetHeight + 'px', marginLeft: input.offsetWidth + 'px'});
+            }
+        });
+
+
+    });
+
+
+
+    function ToggleForm(){
+        $('#new').toggle();
+        $('#addform').toggle();
+        $('#errorDiv').empty();
+    }
+
+    var dataTable;
+    function createTable(){
+        $("#applist").append("<thead ><tr><th>Date</th><th>Time</th><th>Description</th></tr></thead>");
+
+
+         $.get( "/getAppointments", function( data ) {
+            arr = data;
+            dataTable= $('#applist').DataTable({ dom: '<"top"f>rt<"bottom"i><"clear">', paging:false, data:arr,columns: [
+                { data: 'date' },
+                { data: 'time' },
+                { data: 'desc' }
+            ]});
+        });
+
+    }
+
+
+
+    function addAppointment(){
+        var date=$('#datepicker').val();
+        var time=$('#hours').val()+':'+$('#minutes').val()+$('#ampm').val();
+        var desc=$('#desc').val();
+        $.ajax(
+            { url: '/addAppointment',
+             type: 'POST',
+             contentType: 'application/json; charset=utf-8',
+              dataType: 'json',
+               data: JSON.stringify({ date: date, time: time , desc : desc}),
+               success: function(){console.log('yay success');},
+               error: function(xhr, status, error){
+                console.log(JSON.parse(xhr.responseText));
+                console.log("Error: " +error);
+                console.log("Status: " + status);
+               }
+            })
+            .done(function( data ) {
+
+                if(Array.isArray(data)){
+                    if(data[0].error !== null){
+                        $('#errorDiv').empty();
+                        $('#errorDiv').append(data[0].error);
+                        return;
+                    }
+                }
+                dataTable.clear();
+                if(Array.isArray(data)){
+                    dataTable.rows.add(data);
+                }
+                else{
+                    dataTable.rows.add([data]);
+                }
+                dataTable.draw();
+                $('#datepicker').val('');
+                $('#hours').val('');
+                $('#minutes').val('');
+                $('#ampm').val('am');
+                $('#desc').val('');
+                $('#errorDiv').empty();
+            });
+
+    }
+
+</script>
+
+
+</html>
